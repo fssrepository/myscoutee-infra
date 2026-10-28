@@ -1,0 +1,74 @@
+---
+- name: Configure the MyScoutee edge lab
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Install nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+
+    - name: Create lab content directory
+      ansible.builtin.file:
+        path: /srv/myscoutee-lab
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Create lab metadata directory
+      ansible.builtin.file:
+        path: /etc/myscoutee-lab
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Install shared nginx site
+      ansible.builtin.copy:
+        src: ../shared/myscoutee-lab.conf
+        dest: /etc/nginx/conf.d/myscoutee-lab.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reload nginx
+
+    - name: Install shared lab page
+      ansible.builtin.copy:
+        src: ../shared/index.html
+        dest: /srv/myscoutee-lab/index.html
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Install shared synthetic status
+      ansible.builtin.copy:
+        src: ../shared/status.json
+        dest: /srv/myscoutee-lab/status.json
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Record active config tool
+      ansible.builtin.copy:
+        content: "ansible\n"
+        dest: /etc/myscoutee-lab/tool
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Validate nginx configuration
+      ansible.builtin.command: nginx -t
+      changed_when: false
+
+    - name: Enable and start nginx
+      ansible.builtin.service:
+        name: nginx
+        enabled: true
+        state: started
+
+  handlers:
+    - name: Reload nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
